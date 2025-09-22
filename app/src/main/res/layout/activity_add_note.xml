@@ -15,4 +15,35 @@
             android:layout_height="?attr/actionBarSize"
             app:title="Add Note" />
     </com.google.android.material.appbar.AppBarLayout>
+
+
+    <EditText
+        android:id="@+id/tasktitle"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Task Title"
+        android:textSize="24sp"
+        android:padding="8dp"
+        android:layout_marginTop="8dp"
+        android:layout_gravity="center_horizontal" />
+
+    <DatePicker
+        android:id="@+id/taskDate"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center_horizontal"
+        android:layout_marginTop="18dp"
+        android:theme="@style/CustomDatePickerDialogTheme"
+        android:datePickerMode="calendar" />
+
+    <EditText
+        android:id="@+id/taskDesc"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Task Description"
+        android:textSize="20sp"
+        android:padding="8dp"
+        android:layout_marginTop="8dp"
+        android:layout_gravity="center_horizontal"
+        android:inputType="textMultiLine"/>
 </LinearLayout>
