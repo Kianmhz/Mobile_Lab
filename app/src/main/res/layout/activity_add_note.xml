@@ -46,4 +46,11 @@
         android:layout_marginTop="8dp"
         android:layout_gravity="center_horizontal"
         android:inputType="textMultiLine"/>
+
+    <Button
+        android:id="@+id/addNoteDoneButton"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Done!"
+        android:layout_gravity="center"/>
 </LinearLayout>

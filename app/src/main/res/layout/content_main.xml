@@ -6,9 +6,16 @@
     android:layout_height="match_parent">
 
     <!-- Your page content -->
-    <TextView
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:gravity="center"
-        android:text="Hello World!" />
+
+
+
+
+    <SearchView
+        android:id="@+id/searchBar"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:iconifiedByDefault="false"
+        android:queryHint="Search Here" />
+
+
 </FrameLayout>

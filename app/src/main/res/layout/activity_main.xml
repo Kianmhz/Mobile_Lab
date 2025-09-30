@@ -17,6 +17,7 @@
 
         <!-- Content -->
         <include layout="@layout/content_main" />
+
     </LinearLayout>
 
     <!-- Drawer on the left -->
@@ -27,5 +28,7 @@
         android:layout_height="match_parent"
         android:layout_gravity="start"
         app:menu="@menu/menu_drawer" />
+
+
 
 </androidx.drawerlayout.widget.DrawerLayout>

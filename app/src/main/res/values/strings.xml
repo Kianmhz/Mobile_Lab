@@ -8,5 +8,7 @@
     <string name="nav_header_desc">Navigation header image</string>
     <string name="nav_header_title">Your Name</string>
     <string name="nav_header_subtitle">your@email.com</string>
+    <string name="app_label">app_label</string>
+    <string name="earch_hint">earch_hint</string>
 
 </resources>
