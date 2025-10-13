@@ -1,10 +1,12 @@
 package com.example.todo
 
 import android.content.Intent
+import android.graphics.Color
 import android.os.Bundle
 import android.widget.Button
 import android.widget.DatePicker
 import android.widget.EditText
+import android.widget.Spinner
 import androidx.appcompat.app.AppCompatActivity
 import com.google.android.material.appbar.MaterialToolbar
 
@@ -19,15 +21,31 @@ class AddNoteActivity : AppCompatActivity() {
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
         toolbar.setNavigationOnClickListener { onBackPressedDispatcher.onBackPressed() }
 
-        val taskTitle = findViewById<EditText>(R.id.tasktitle)
-        val taskDate = findViewById<DatePicker>(R.id.taskDate)
-        val taskDesc = findViewById<EditText>(R.id.taskDesc)
 
         val doneButton = findViewById<Button>(R.id.addNoteDoneButton)
 
         doneButton.setOnClickListener {
+
+            val taskTitle = findViewById<EditText>(R.id.tasktitle)
+            val taskDate = findViewById<DatePicker>(R.id.taskDate)
+            val taskDesc = findViewById<EditText>(R.id.taskDesc)
+            val taskColour = findViewById<Spinner>(R.id.taskColour)
+
+
             val title = taskTitle.text?.toString()?.trim().orEmpty()
             val desc  = taskDesc.text?.toString()?.trim().orEmpty()
+            val colourVal = taskColour.selectedItem?.toString()
+
+            val color = when (colourVal){
+                "Red" -> Color.RED
+                "Blue" -> Color.BLUE
+                "Green" -> Color.GREEN
+                "Yellow" -> Color.YELLOW
+                "Purple" -> Color.MAGENTA
+                else -> Color.TRANSPARENT
+
+            }
+
 
             if (title.isBlank()) {
                 taskTitle.error = "Title cannot be empty"
@@ -43,7 +61,7 @@ class AddNoteActivity : AppCompatActivity() {
             val dateMillis = cal.timeInMillis
 
             // You can add a color picker later; for now default to a nice blue
-            val color = 0xFF90CAF9.toInt()
+            //val color = 0xFF90CAF9.toInt()
 
             // Return to Main with data
             val data = Intent().apply {
