@@ -12,8 +12,12 @@ import android.content.Intent
 import android.database.sqlite.SQLiteDatabase
 import android.database.sqlite.SQLiteOpenHelper
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
 
 class MainActivity : AppCompatActivity() {
+
+    private lateinit var adapter: TaskAdapter
 
     private lateinit var drawer: DrawerLayout
     private lateinit var navView: NavigationView
@@ -59,6 +63,14 @@ class MainActivity : AppCompatActivity() {
 
         // DB helper inside Main
         dbHelper = DbHelper(this)
+
+        //recyclerView
+
+        val recyclerView = findViewById<RecyclerView>(R.id.tasks_arr)
+        adapter = TaskAdapter(emptyList())
+        recyclerView.adapter = adapter
+        recyclerView.layoutManager = LinearLayoutManager(this)
+        refresh()
 
         navView.setNavigationItemSelectedListener { item ->
             when (item.itemId) {
@@ -158,9 +170,26 @@ class MainActivity : AppCompatActivity() {
         }
         return res
     }
+//helper function
+private fun allTasks(): List<Task> {
+    return all().map {
+        Task(
+            id = it["_id"] as Long,
+            title = it["title"] as String,
+            note = it["note"] as String,
+            color = it["color"] as Int,
+            createdAt = it["created_at"] as Long,
+            done = it["done"] as Boolean
+        )
+    }
+}
+
 
     private fun refresh() {
-        val data = all()
+        val tasks = allTasks()
+        adapter.submitList(tasks)
+
+
         // TODO: adapter.submitList(...) or rebuild visible list.
     }
 }
