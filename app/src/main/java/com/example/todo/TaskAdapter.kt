@@ -1,5 +1,6 @@
 package com.example.todo
 
+import android.annotation.SuppressLint
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -26,6 +27,7 @@ class TaskAdapter(private var tasks: List<Task>) :
         return TaskViewHolder(view)
     }
 
+    @SuppressLint("ClickableViewAccessibility")
     override fun onBindViewHolder(holder: TaskViewHolder, position: Int) {
         val task = tasks[position]
         holder.titleText.text = task.title
@@ -35,6 +37,28 @@ class TaskAdapter(private var tasks: List<Task>) :
         val date = Date(task.createdAt)
         val formatter = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
         holder.tDate.text = formatter.format(date)
+
+        holder.itemView.setOnTouchListener { v, event ->
+            when (event.action) {
+                android.view.MotionEvent.ACTION_DOWN -> {
+                    v.animate()
+                        .scaleX(1.05f)
+                        .scaleY(1.05f)
+                        .setDuration(150)
+                        .start()
+                    true
+                }
+                android.view.MotionEvent.ACTION_UP -> {
+                    v.animate()
+                        .scaleX(1f)
+                        .scaleY(1f)
+                        .setDuration(150)
+                        .start()
+                    true
+                }
+                else -> false
+            }
+        }
     }
 
     override fun getItemCount(): Int = tasks.size
