@@ -52,7 +52,6 @@ class AddNoteActivity : AppCompatActivity() {
                 )
             }
 
-            // Color spinner selection (assuming entries like ["Red","Blue",...])
             val colorName = when (incomingColor) {
                 Color.RED -> "Red"
                 Color.BLUE -> "Blue"
@@ -61,7 +60,6 @@ class AddNoteActivity : AppCompatActivity() {
                 Color.MAGENTA -> "Purple"
                 else -> "None"
             }
-            // Optionally set selection by name
             (0 until taskColour.count)
                 .firstOrNull { taskColour.getItemAtPosition(it)?.toString() == colorName }
                 ?.let { taskColour.setSelection(it) }

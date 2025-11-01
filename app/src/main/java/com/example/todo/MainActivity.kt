@@ -27,7 +27,7 @@ class MainActivity : AppCompatActivity() {
     // DB
     private lateinit var dbHelper: DbHelper
 
-    // Use ONE launcher that handles both add + edit results
+    // Use same launcher that handles both add and edit results
     private val addNoteActivity = registerForActivityResult(
         ActivityResultContracts.StartActivityForResult()
     ) { result ->
