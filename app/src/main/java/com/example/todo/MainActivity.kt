@@ -27,18 +27,25 @@ class MainActivity : AppCompatActivity() {
     // DB
     private lateinit var dbHelper: DbHelper
 
-    // Launcher to get data back from AddNoteActivity
-    private val addNoteLauncher = registerForActivityResult(
+    // Use ONE launcher that handles both add + edit results
+    private val addNoteActivity = registerForActivityResult(
         ActivityResultContracts.StartActivityForResult()
     ) { result ->
         if (result.resultCode == RESULT_OK && result.data != null) {
+            val taskId = result.data!!.getLongExtra("taskId", -1L)
             val title = result.data!!.getStringExtra("title").orEmpty()
             val desc  = result.data!!.getStringExtra("desc").orEmpty()
             val date  = result.data!!.getLongExtra("dateMillis", System.currentTimeMillis())
             val color = result.data!!.getIntExtra("color", 0xFF90CAF9.toInt())
 
-            insert(title = title, note = desc, createdAt = date, color = color)
-            refresh() // TODO: update RecyclerView / UI here
+            if (taskId >= 0) {
+                // EDIT
+                updateTask(taskId, title, desc, date, color)
+            } else {
+                // ADD
+                insert(title = title, note = desc, createdAt = date, color = color)
+            }
+            refresh()
         }
     }
 
@@ -67,14 +74,24 @@ class MainActivity : AppCompatActivity() {
         //recyclerView
 
         val recyclerView = findViewById<RecyclerView>(R.id.tasks_arr)
-        adapter = TaskAdapter(emptyList())
+        adapter = TaskAdapter(emptyList()) { task ->
+            val intent = Intent(this, AddNoteActivity::class.java).apply {
+                putExtra("mode", "edit")
+                putExtra("taskId", task.id)
+                putExtra("title", task.title)
+                putExtra("desc", task.note)
+                putExtra("dateMillis", task.createdAt)
+                putExtra("color", task.color)
+            }
+            addNoteActivity.launch(intent)
+        }
         recyclerView.adapter = adapter
         recyclerView.layoutManager = LinearLayoutManager(this)
         refresh()
 
         navView.setNavigationItemSelectedListener { item ->
             when (item.itemId) {
-                R.id.nav_add_note -> addNoteLauncher.launch(Intent(this, AddNoteActivity::class.java))
+                R.id.nav_add_note -> addNoteActivity.launch(Intent(this, AddNoteActivity::class.java))
             }
             drawer.closeDrawers()
             true
@@ -99,7 +116,10 @@ class MainActivity : AppCompatActivity() {
     override fun onOptionsItemSelected(item: android.view.MenuItem): Boolean {
         return when (item.itemId) {
             R.id.action_add -> {
-                addNoteLauncher.launch(Intent(this, AddNoteActivity::class.java))
+                val intent = Intent(this, AddNoteActivity::class.java).apply {
+                    putExtra("mode", "add")
+                }
+                addNoteActivity.launch(intent)
                 true
             }
             else -> super.onOptionsItemSelected(item)
@@ -139,6 +159,25 @@ class MainActivity : AppCompatActivity() {
         }
         dbHelper.writableDatabase.insert("tasks", null, cv)
     }
+
+    private fun updateTask(
+        id: Long,
+        title: String,
+        note: String,
+        createdAt: Long,
+        color: Int,
+        done: Boolean = false
+    ) {
+        val cv = ContentValues().apply {
+            put("title", title)
+            put("note", note)
+            put("color", color)
+            put("created_at", createdAt)
+            put("done", if (done) 1 else 0)
+        }
+        dbHelper.writableDatabase.update("tasks", cv, "_id = ?", arrayOf(id.toString()))
+    }
+
 
     private fun all(): List<Map<String, Any>> =
         query("SELECT * FROM tasks ORDER BY created_at DESC", null)
@@ -188,9 +227,6 @@ private fun allTasks(): List<Task> {
     private fun refresh() {
         val tasks = allTasks()
         adapter.submitList(tasks)
-
-
-        // TODO: adapter.submitList(...) or rebuild visible list.
     }
 }
 
