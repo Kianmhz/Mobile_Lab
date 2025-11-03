@@ -2,18 +2,23 @@ package com.example.todo
 
 import android.content.ContentValues
 import android.content.Context
-import android.os.Bundle
-import androidx.appcompat.app.ActionBarDrawerToggle
-import androidx.appcompat.app.AppCompatActivity
-import androidx.appcompat.widget.Toolbar
-import androidx.drawerlayout.widget.DrawerLayout
-import com.google.android.material.navigation.NavigationView
 import android.content.Intent
 import android.database.sqlite.SQLiteDatabase
 import android.database.sqlite.SQLiteOpenHelper
+import android.os.Build
+import android.os.Bundle
+import android.view.Menu
+import android.view.MenuItem
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.annotation.RequiresApi
+import androidx.appcompat.app.ActionBarDrawerToggle
+import androidx.appcompat.app.AppCompatActivity
+import androidx.appcompat.widget.SearchView
+import androidx.appcompat.widget.Toolbar
+import androidx.drawerlayout.widget.DrawerLayout
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import com.google.android.material.navigation.NavigationView
 
 class MainActivity : AppCompatActivity() {
 
@@ -38,7 +43,7 @@ class MainActivity : AppCompatActivity() {
             val color = result.data!!.getIntExtra("color", 0xFF90CAF9.toInt())
 
             insert(title = title, note = desc, createdAt = date, color = color)
-            refresh() // TODO: update RecyclerView / UI here
+            refresh()
         }
     }
 
@@ -64,8 +69,7 @@ class MainActivity : AppCompatActivity() {
         // DB helper inside Main
         dbHelper = DbHelper(this)
 
-        //recyclerView
-
+        // RecyclerView
         val recyclerView = findViewById<RecyclerView>(R.id.tasks_arr)
         adapter = TaskAdapter(emptyList())
         recyclerView.adapter = adapter
@@ -81,22 +85,34 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    override fun onCreateOptionsMenu(menu: android.view.Menu): Boolean {
+    // --- App Bar Menu (Search + Add) ---
+    @RequiresApi(Build.VERSION_CODES.HONEYCOMB)
+    override fun onCreateOptionsMenu(menu: Menu): Boolean {
         menuInflater.inflate(R.menu.menu_main, menu)
-        val searchItem = menu.findItem(R.id.searchBar)
-        val sv = searchItem?.actionView as? androidx.appcompat.widget.SearchView
-        sv?.setOnQueryTextListener(object : androidx.appcompat.widget.SearchView.OnQueryTextListener {
-            override fun onQueryTextSubmit(q: String?) = false
+
+        val searchItem = menu.findItem(R.id.action_search)
+
+        val sv = searchItem?.actionView as? SearchView
+
+        sv?.queryHint = "Search by title"
+        // expand so typing works immediately (optional)
+        searchItem?.expandActionView()
+        sv?.isIconified = false
+
+        sv?.setOnQueryTextListener(object : SearchView.OnQueryTextListener {
+            override fun onQueryTextSubmit(q: String?): Boolean {
+                adapter.submitList(if (q.isNullOrBlank()) allTasks() else searchTasksByTitle(q))
+                return true
+            }
             override fun onQueryTextChange(newText: String?): Boolean {
-                val data = if (newText.isNullOrBlank()) all() else search(newText)
-                // TODO: adapter.submitList(data)
+                adapter.submitList(if (newText.isNullOrBlank()) allTasks() else searchTasksByTitle(newText))
                 return true
             }
         })
         return true
     }
 
-    override fun onOptionsItemSelected(item: android.view.MenuItem): Boolean {
+    override fun onOptionsItemSelected(item: MenuItem): Boolean {
         return when (item.itemId) {
             R.id.action_add -> {
                 addNoteLauncher.launch(Intent(this, AddNoteActivity::class.java))
@@ -122,6 +138,8 @@ class MainActivity : AppCompatActivity() {
                 )
                 """.trimIndent()
             )
+            // Optional index for faster LIKE searches on title
+            db.execSQL("CREATE INDEX IF NOT EXISTS idx_tasks_title ON tasks(title)")
         }
         override fun onUpgrade(db: SQLiteDatabase, oldV: Int, newV: Int) {
             db.execSQL("DROP TABLE IF EXISTS tasks")
@@ -143,9 +161,14 @@ class MainActivity : AppCompatActivity() {
     private fun all(): List<Map<String, Any>> =
         query("SELECT * FROM tasks ORDER BY created_at DESC", null)
 
+    // Case-insensitive title search
     private fun search(q: String): List<Map<String, Any>> =
-        query("SELECT * FROM tasks WHERE title LIKE ? ORDER BY created_at DESC", arrayOf("%$q%"))
+        query(
+            "SELECT * FROM tasks WHERE title LIKE ? COLLATE NOCASE ORDER BY created_at DESC",
+            arrayOf("%$q%")
+        )
 
+    @RequiresApi(Build.VERSION_CODES.JELLY_BEAN)
     private fun query(sql: String, args: Array<String>?): List<Map<String, Any>> {
         val db = dbHelper.readableDatabase
         val c = db.rawQuery(sql, args)
@@ -170,27 +193,37 @@ class MainActivity : AppCompatActivity() {
         }
         return res
     }
-//helper function
-private fun allTasks(): List<Task> {
-    return all().map {
-        Task(
-            id = it["_id"] as Long,
-            title = it["title"] as String,
-            note = it["note"] as String,
-            color = it["color"] as Int,
-            createdAt = it["created_at"] as Long,
-            done = it["done"] as Boolean
-        )
-    }
-}
 
+    // Map all rows → Task
+    private fun allTasks(): List<Task> {
+        return all().map {
+            Task(
+                id = it["_id"] as Long,
+                title = it["title"] as String,
+                note = it["note"] as String,
+                color = it["color"] as Int,
+                createdAt = it["created_at"] as Long,
+                done = it["done"] as Boolean
+            )
+        }
+    }
+
+    // Map search rows → Task
+    private fun searchTasksByTitle(q: String): List<Task> {
+        return search(q).map {
+            Task(
+                id = it["_id"] as Long,
+                title = it["title"] as String,
+                note = it["note"] as String,
+                color = it["color"] as Int,
+                createdAt = it["created_at"] as Long,
+                done = it["done"] as Boolean
+            )
+        }
+    }
 
     private fun refresh() {
-        val tasks = allTasks()
-        adapter.submitList(tasks)
-
-
-        // TODO: adapter.submitList(...) or rebuild visible list.
+        adapter.submitList(allTasks())
     }
 }
 
