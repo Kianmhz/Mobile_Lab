@@ -6,5 +6,6 @@ data class Task(
     val note: String,
     val color: Int,
     val createdAt: Long,
-    val done: Boolean
+    val done: Boolean,
+    val checkbox: Boolean = false,
 )
