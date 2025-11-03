@@ -9,6 +9,7 @@ import android.os.Build
 import android.os.Bundle
 import android.view.Menu
 import android.view.MenuItem
+import android.widget.Button
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.RequiresApi
 import androidx.appcompat.app.ActionBarDrawerToggle
@@ -71,9 +72,14 @@ class MainActivity : AppCompatActivity() {
 
         // RecyclerView
         val recyclerView = findViewById<RecyclerView>(R.id.tasks_arr)
-        adapter = TaskAdapter(emptyList())
+        adapter = TaskAdapter(mutableListOf())
+
         recyclerView.adapter = adapter
         recyclerView.layoutManager = LinearLayoutManager(this)
+        val deleteButton = findViewById<Button>(R.id.btnDeleteSelected)
+        deleteButton.setOnClickListener {
+            deleteCheckedTasks()
+        }
         refresh()
 
         navView.setNavigationItemSelectedListener { item ->
@@ -116,6 +122,10 @@ class MainActivity : AppCompatActivity() {
         return when (item.itemId) {
             R.id.action_add -> {
                 addNoteLauncher.launch(Intent(this, AddNoteActivity::class.java))
+                true
+            }
+            R.id.btnDeleteSelected -> {
+                deleteCheckedTasks()
                 true
             }
             else -> super.onOptionsItemSelected(item)
@@ -192,6 +202,18 @@ class MainActivity : AppCompatActivity() {
             }
         }
         return res
+    }
+
+    private fun deleteCheckedTasks() {
+        val checkedIds = adapter.getCheckedTaskIds()
+        if (checkedIds.isEmpty()) return
+
+        val db = dbHelper.writableDatabase
+        checkedIds.forEach { id ->
+            db.delete("tasks", "_id = ?", arrayOf(id.toString()))
+        }
+        adapter.clearChecked()
+        refresh()
     }
 
     // Map all rows → Task

@@ -7,4 +7,5 @@ data class Task(
     val color: Int,
     val createdAt: Long,
     val done: Boolean = false,
+    val checkbox: Boolean = false,
 )
