@@ -5,70 +5,96 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:fillViewport="true">
-<LinearLayout
-    android:orientation="vertical"
-    android:layout_width="match_parent"
-    android:layout_height="match_parent">
 
-    <com.google.android.material.appbar.AppBarLayout
+    <LinearLayout
+        android:orientation="vertical"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content">
+        android:layout_height="match_parent"
+        android:padding="16dp">
 
-        <com.google.android.material.appbar.MaterialToolbar
-            android:id="@+id/toolbar"
+        <com.google.android.material.appbar.AppBarLayout
             android:layout_width="match_parent"
-            android:layout_height="?attr/actionBarSize"
-            app:title="Add Note" />
-    </com.google.android.material.appbar.AppBarLayout>
+            android:layout_height="wrap_content">
 
+            <com.google.android.material.appbar.MaterialToolbar
+                android:id="@+id/toolbar"
+                android:layout_width="match_parent"
+                android:layout_height="?attr/actionBarSize"
+                app:title="Add Note" />
+        </com.google.android.material.appbar.AppBarLayout>
 
-    <EditText
-        android:id="@+id/tasktitle"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:hint="Task Title"
-        android:textSize="24sp"
-        android:padding="8dp"
-        android:layout_marginTop="8dp"
-        android:layout_gravity="center_horizontal" />
+        <EditText
+            android:id="@+id/tasktitle"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="Task Title"
+            android:textSize="24sp"
+            android:padding="8dp"
+            android:layout_marginTop="8dp" />
 
-    <DatePicker
-        android:id="@+id/taskDate"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_gravity="center_horizontal"
-        android:layout_marginTop="18dp"
-        android:theme="@style/CustomDatePickerDialogTheme"
-        android:datePickerMode="calendar" />
+        <DatePicker
+            android:id="@+id/taskDate"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center_horizontal"
+            android:layout_marginTop="18dp"
+            android:theme="@style/CustomDatePickerDialogTheme"
+            android:datePickerMode="calendar" />
 
-    <EditText
-        android:id="@+id/taskDesc"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:hint="Task Description"
-        android:textSize="20sp"
-        android:padding="8dp"
-        android:layout_marginTop="8dp"
-        android:layout_gravity="center_horizontal"
-        android:inputType="textMultiLine"/>
+        <EditText
+            android:id="@+id/taskDesc"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="Task Description"
+            android:textSize="20sp"
+            android:padding="8dp"
+            android:layout_marginTop="8dp"
+            android:inputType="textMultiLine"/>
 
-    <Spinner
-        android:id="@+id/taskColour"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_gravity="center_horizontal"
-        android:layout_marginTop="8dp"
-        android:entries="@array/colour_options_for_add_task"/>
+        <Spinner
+            android:id="@+id/taskColour"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:entries="@array/colour_options_for_add_task"/>
 
+        <!-- 📸 New section for image -->
+        <ImageView
+            android:id="@+id/imagePreview"
+            android:layout_width="200dp"
+            android:layout_height="200dp"
+            android:layout_gravity="center_horizontal"
+            android:scaleType="centerCrop"
+            android:layout_marginTop="12dp"
+            android:src="@android:drawable/ic_menu_gallery" />
 
+        <LinearLayout
+            android:orientation="horizontal"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center_horizontal"
+            android:layout_marginTop="8dp">
 
-    <Button
-        android:id="@+id/addNoteDoneButton"
-        android:layout_marginTop="8dp"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Done!"
-        android:layout_gravity="center"/>
-</LinearLayout>
-    </ScrollView>
+            <Button
+                android:id="@+id/btnTakePhoto"
+                android:text="Take Photo"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginEnd="8dp"/>
 
+            <Button
+                android:id="@+id/btnChooseImage"
+                android:text="Choose Image"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"/>
+        </LinearLayout>
+
+        <Button
+            android:id="@+id/addNoteDoneButton"
+            android:layout_marginTop="12dp"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Done!"
+            android:layout_gravity="center"/>
+    </LinearLayout>
+</ScrollView>
