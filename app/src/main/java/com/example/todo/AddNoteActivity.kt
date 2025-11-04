@@ -58,17 +58,14 @@ class AddNoteActivity : AppCompatActivity() {
                     cal.get(Calendar.DAY_OF_MONTH)
                 )
             }
-        }
 
-        val takePhotoLauncher = registerForActivityResult(ActivityResultContracts.TakePicturePreview()) { bitmap: Bitmap? ->
-            bitmap?.let {
-                // Save bitmap to internal storage
-                val file = File(cacheDir, "task_${System.currentTimeMillis()}.jpg")
-                FileOutputStream(file).use { out ->
-                    it.compress(Bitmap.CompressFormat.JPEG, 90, out)
-                }
-                imageUri = Uri.fromFile(file)
-                imagePreview.setImageBitmap(it)
+            val colorName = when (incomingColor) {
+                Color.RED -> "Red"
+                Color.BLUE -> "Blue"
+                Color.GREEN -> "Green"
+                Color.YELLOW -> "Yellow"
+                Color.MAGENTA -> "Purple"
+                else -> "None"
             }
             (0 until taskColour.count)
                 .firstOrNull { taskColour.getItemAtPosition(it)?.toString() == colorName }
