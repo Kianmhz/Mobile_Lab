@@ -41,8 +41,9 @@ class MainActivity : AppCompatActivity() {
             val desc  = result.data!!.getStringExtra("desc").orEmpty()
             val date  = result.data!!.getLongExtra("dateMillis", System.currentTimeMillis())
             val color = result.data!!.getIntExtra("color", 0xFF90CAF9.toInt())
+            val imagePath = result.data!!.getStringExtra("imagePath")
 
-            insert(title = title, note = desc, createdAt = date, color = color)
+            insert(title = title, note = desc, createdAt = date, color = color, imagePath = imagePath)
             refresh()
         }
     }
@@ -124,39 +125,49 @@ class MainActivity : AppCompatActivity() {
 
     // ------------------ SQLite ------------------
 
-    inner class DbHelper(ctx: Context) : SQLiteOpenHelper(ctx, "todo.db", null, 1) {
+    inner class DbHelper(ctx: Context) : SQLiteOpenHelper(ctx, "todo.db", null, 2) {
         override fun onCreate(db: SQLiteDatabase) {
             db.execSQL(
                 """
-                CREATE TABLE tasks(
-                    _id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    title TEXT NOT NULL,
-                    note TEXT DEFAULT '',
-                    color INTEGER NOT NULL,
-                    created_at INTEGER NOT NULL,
-                    done INTEGER NOT NULL DEFAULT 0
-                )
-                """.trimIndent()
+            CREATE TABLE tasks(
+                _id INTEGER PRIMARY KEY AUTOINCREMENT,
+                title TEXT NOT NULL,
+                note TEXT DEFAULT '',
+                color INTEGER NOT NULL,
+                created_at INTEGER NOT NULL,
+                done INTEGER NOT NULL DEFAULT 0,
+                image_path TEXT DEFAULT ''
             )
-            // Optional index for faster LIKE searches on title
+        """.trimIndent()
+            )
             db.execSQL("CREATE INDEX IF NOT EXISTS idx_tasks_title ON tasks(title)")
         }
+
         override fun onUpgrade(db: SQLiteDatabase, oldV: Int, newV: Int) {
             db.execSQL("DROP TABLE IF EXISTS tasks")
             onCreate(db)
         }
     }
 
-    private fun insert(title: String, note: String, createdAt: Long, color: Int, done: Boolean = false) {
+    private fun insert(
+        title: String,
+        note: String,
+        createdAt: Long,
+        color: Int,
+        done: Boolean = false,
+        imagePath: String? = null
+    ) {
         val cv = ContentValues().apply {
             put("title", title)
             put("note", note)
             put("color", color)
             put("created_at", createdAt)
             put("done", if (done) 1 else 0)
+            put("image_path", imagePath)
         }
         dbHelper.writableDatabase.insert("tasks", null, cv)
     }
+
 
     private fun all(): List<Map<String, Any>> =
         query("SELECT * FROM tasks ORDER BY created_at DESC", null)
@@ -179,6 +190,7 @@ class MainActivity : AppCompatActivity() {
             val n  = it.getColumnIndexOrThrow("note")
             val col= it.getColumnIndexOrThrow("color")
             val ts = it.getColumnIndexOrThrow("created_at")
+            val imgp = it.getColumnIndexOrThrow("image_path")
             val dn = it.getColumnIndexOrThrow("done")
             while (it.moveToNext()) {
                 res += mapOf(
@@ -187,6 +199,7 @@ class MainActivity : AppCompatActivity() {
                     "note" to it.getString(n),
                     "color" to it.getInt(col),
                     "created_at" to it.getLong(ts),
+                    "image_path" to it.getString(imgp),
                     "done" to (it.getInt(dn) == 1)
                 )
             }
@@ -203,6 +216,7 @@ class MainActivity : AppCompatActivity() {
                 note = it["note"] as String,
                 color = it["color"] as Int,
                 createdAt = it["created_at"] as Long,
+                imagePath = it["image_path"] as String,
                 done = it["done"] as Boolean
             )
         }
@@ -217,7 +231,8 @@ class MainActivity : AppCompatActivity() {
                 note = it["note"] as String,
                 color = it["color"] as Int,
                 createdAt = it["created_at"] as Long,
-                done = it["done"] as Boolean
+                imagePath = it["image_path"] as String,
+                done = it["done"] as Boolean,
             )
         }
     }
