@@ -27,35 +27,7 @@
                 android:layout_height="wrap_content"
                 android:padding="16dp">
 
-                <!-- SearchView moved from menu to layout -->
-                <androidx.appcompat.widget.SearchView
-                    android:id="@+id/searchBar"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:background="@android:color/white"
-                    android:elevation="4dp"
-                    android:layout_marginBottom="12dp"
-                    app:iconifiedByDefault="false"
-                    app:queryHint="Search by title" />
 
-                <!-- Delete button -->
-                <Button
-                    android:id="@+id/btnDeleteSelected"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Delete Selected"
-                    android:textAllCaps="false"
-                    android:textSize="14sp"
-                    android:paddingHorizontal="16dp"
-                    android:paddingVertical="8dp"
-                    android:backgroundTint="@color/design_default_color_error"
-                    android:textColor="@android:color/white"
-                    android:layout_marginBottom="12dp"
-                    android:layout_gravity="start"
-                    android:layout_marginTop="4dp"
-                    android:layout_marginStart="4dp" />
-
-                <!-- Task list -->
                 <androidx.recyclerview.widget.RecyclerView
                     android:id="@+id/tasks_arr"
                     android:layout_width="match_parent"

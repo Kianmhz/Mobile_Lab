@@ -9,7 +9,6 @@ import android.os.Build
 import android.os.Bundle
 import android.view.Menu
 import android.view.MenuItem
-import android.widget.Button
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.RequiresApi
 import androidx.appcompat.app.ActionBarDrawerToggle
@@ -30,23 +29,18 @@ class MainActivity : AppCompatActivity() {
     private lateinit var toggle: ActionBarDrawerToggle
     private lateinit var dbHelper: DbHelper
 
-    // --- Launcher for Add/Edit Note Activity ---
+    // Launcher to get data back from AddNoteActivity
     private val addNoteLauncher = registerForActivityResult(
         ActivityResultContracts.StartActivityForResult()
     ) { result ->
         if (result.resultCode == RESULT_OK && result.data != null) {
-            val taskId = result.data!!.getLongExtra("taskId", -1L)
             val title = result.data!!.getStringExtra("title").orEmpty()
             val desc = result.data!!.getStringExtra("desc").orEmpty()
             val date = result.data!!.getLongExtra("dateMillis", System.currentTimeMillis())
             val color = result.data!!.getIntExtra("color", 0xFF90CAF9.toInt())
             val imagePath = result.data!!.getStringExtra("imagePath")
 
-            if (taskId >= 0) {
-                updateTask(taskId, title, desc, date, color, imagePath)
-            } else {
-                insert(title, desc, date, color, imagePath = imagePath)
-            }
+            insert(title = title, note = desc, createdAt = date, color = color, imagePath = imagePath)
             refresh()
         }
     }
@@ -69,67 +63,53 @@ class MainActivity : AppCompatActivity() {
 
         dbHelper = DbHelper(this)
 
+        // RecyclerView
         val recyclerView = findViewById<RecyclerView>(R.id.tasks_arr)
-        adapter = TaskAdapter(mutableListOf()) { task ->
-            val intent = Intent(this, AddNoteActivity::class.java).apply {
-                putExtra("mode", "edit")
-                putExtra("taskId", task.id)
-                putExtra("title", task.title)
-                putExtra("desc", task.note)
-                putExtra("dateMillis", task.createdAt)
-                putExtra("color", task.color)
-                putExtra("imagePath", task.imagePath)
-            }
-            addNoteLauncher.launch(intent)
-        }
-
+        adapter = TaskAdapter(emptyList())
         recyclerView.adapter = adapter
         recyclerView.layoutManager = LinearLayoutManager(this)
-
-        val deleteButton = findViewById<Button>(R.id.btnDeleteSelected)
-        deleteButton.setOnClickListener { deleteCheckedTasks() }
-
-        val searchView = findViewById<SearchView>(R.id.searchBar)
-        searchView.setOnQueryTextListener(object : SearchView.OnQueryTextListener {
-            override fun onQueryTextSubmit(q: String?): Boolean {
-                adapter.submitList(if (q.isNullOrBlank()) allTasks() else searchTasksByTitle(q))
-                return true
-            }
-
-            override fun onQueryTextChange(newText: String?): Boolean {
-                adapter.submitList(if (newText.isNullOrBlank()) allTasks() else searchTasksByTitle(newText))
-                return true
-            }
-        })
-
         refresh()
 
         navView.setNavigationItemSelectedListener { item ->
             when (item.itemId) {
-                R.id.nav_add_note -> {
-                    val intent = Intent(this, AddNoteActivity::class.java).apply {
-                        putExtra("mode", "add")
-                    }
-                    addNoteLauncher.launch(intent)
-                }
+                R.id.nav_add_note -> addNoteLauncher.launch(Intent(this, AddNoteActivity::class.java))
             }
             drawer.closeDrawers()
             true
         }
     }
 
+    // --- App Bar Menu (Search + Add) ---
+    @RequiresApi(Build.VERSION_CODES.HONEYCOMB)
     override fun onCreateOptionsMenu(menu: Menu): Boolean {
         menuInflater.inflate(R.menu.menu_main, menu)
+
+        val searchItem = menu.findItem(R.id.action_search)
+
+        val sv = searchItem?.actionView as? SearchView
+
+        sv?.queryHint = "Search by title"
+        // expand so typing works immediately (optional)
+        searchItem?.expandActionView()
+        sv?.isIconified = false
+
+        sv?.setOnQueryTextListener(object : SearchView.OnQueryTextListener {
+            override fun onQueryTextSubmit(q: String?): Boolean {
+                adapter.submitList(if (q.isNullOrBlank()) allTasks() else searchTasksByTitle(q))
+                return true
+            }
+            override fun onQueryTextChange(newText: String?): Boolean {
+                adapter.submitList(if (newText.isNullOrBlank()) allTasks() else searchTasksByTitle(newText))
+                return true
+            }
+        })
         return true
     }
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
         return when (item.itemId) {
             R.id.action_add -> {
-                val intent = Intent(this, AddNoteActivity::class.java).apply {
-                    putExtra("mode", "add")
-                }
-                addNoteLauncher.launch(intent)
+                addNoteLauncher.launch(Intent(this, AddNoteActivity::class.java))
                 true
             }
 
@@ -198,8 +178,9 @@ class MainActivity : AppCompatActivity() {
             put("done", if (done) 1 else 0)
             put("image_path", imagePath)
         }
-        dbHelper.writableDatabase.update("tasks", cv, "_id = ?", arrayOf(id.toString()))
+        dbHelper.writableDatabase.insert("tasks", null, cv)
     }
+
 
     private fun all(): List<Map<String, Any>> =
         query("SELECT * FROM tasks ORDER BY created_at DESC", null)
@@ -221,6 +202,7 @@ class MainActivity : AppCompatActivity() {
             val n = it.getColumnIndexOrThrow("note")
             val col = it.getColumnIndexOrThrow("color")
             val ts = it.getColumnIndexOrThrow("created_at")
+            val imgp = it.getColumnIndexOrThrow("image_path")
             val dn = it.getColumnIndexOrThrow("done")
             val img = it.getColumnIndexOrThrow("image_path")
             while (it.moveToNext()) {
