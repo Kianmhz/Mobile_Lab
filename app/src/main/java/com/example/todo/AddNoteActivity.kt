@@ -6,7 +6,6 @@ import android.graphics.Bitmap
 import android.graphics.Color
 import android.net.Uri
 import android.os.Bundle
-import android.provider.MediaStore
 import android.widget.*
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
@@ -35,12 +34,29 @@ class AddNoteActivity : AppCompatActivity() {
         val imagePreview = findViewById<ImageView>(R.id.imagePreview)
         val btnTakePhoto = findViewById<Button>(R.id.btnTakePhoto)
         val btnChooseImage = findViewById<Button>(R.id.btnChooseImage)
+        val doneButton = findViewById<Button>(R.id.addNoteDoneButton)
 
-        // Launchers for image picking
-        val pickImageLauncher = registerForActivityResult(ActivityResultContracts.GetContent()) { uri ->
-            uri?.let {
-                imageUri = it
-                imagePreview.setImageURI(it)
+        // --- Handle modes (add vs edit) ---
+        val mode = intent.getStringExtra("mode")
+        val taskId = intent.getLongExtra("taskId", -1L)
+        val incomingTitle = intent.getStringExtra("title")
+        val incomingDesc = intent.getStringExtra("desc")
+        val incomingDateMillis = intent.getLongExtra("dateMillis", 0L)
+        val incomingColor = intent.getIntExtra("color", Color.TRANSPARENT)
+        val incomingImagePath = intent.getStringExtra("imagePath")
+
+        if (mode == "edit") {
+            supportActionBar?.title = "Edit Task"
+            taskTitle.setText(incomingTitle.orEmpty())
+            taskDesc.setText(incomingDesc.orEmpty())
+
+            if (incomingDateMillis != 0L) {
+                val cal = Calendar.getInstance().apply { timeInMillis = incomingDateMillis }
+                taskDate.updateDate(
+                    cal.get(Calendar.YEAR),
+                    cal.get(Calendar.MONTH),
+                    cal.get(Calendar.DAY_OF_MONTH)
+                )
             }
         }
 
@@ -54,12 +70,41 @@ class AddNoteActivity : AppCompatActivity() {
                 imageUri = Uri.fromFile(file)
                 imagePreview.setImageBitmap(it)
             }
+            (0 until taskColour.count)
+                .firstOrNull { taskColour.getItemAtPosition(it)?.toString() == colorName }
+                ?.let { taskColour.setSelection(it) }
+
+            if (!incomingImagePath.isNullOrEmpty()) {
+                imageUri = Uri.parse(incomingImagePath)
+                imagePreview.setImageURI(imageUri)
+            }
+        } else {
+            supportActionBar?.title = "Add Task"
+        }
+
+        // --- Image pickers ---
+        val pickImageLauncher = registerForActivityResult(ActivityResultContracts.GetContent()) { uri ->
+            uri?.let {
+                imageUri = it
+                imagePreview.setImageURI(it)
+            }
+        }
+
+        val takePhotoLauncher = registerForActivityResult(ActivityResultContracts.TakePicturePreview()) { bitmap: Bitmap? ->
+            bitmap?.let {
+                val file = File(cacheDir, "task_${System.currentTimeMillis()}.jpg")
+                FileOutputStream(file).use { out ->
+                    it.compress(Bitmap.CompressFormat.JPEG, 90, out)
+                }
+                imageUri = Uri.fromFile(file)
+                imagePreview.setImageBitmap(it)
+            }
         }
 
         btnChooseImage.setOnClickListener { pickImageLauncher.launch("image/*") }
         btnTakePhoto.setOnClickListener { takePhotoLauncher.launch(null) }
 
-        val doneButton = findViewById<Button>(R.id.addNoteDoneButton)
+        // --- Done button ---
         doneButton.setOnClickListener {
             val title = taskTitle.text?.toString()?.trim().orEmpty()
             val desc = taskDesc.text?.toString()?.trim().orEmpty()
@@ -86,11 +131,12 @@ class AddNoteActivity : AppCompatActivity() {
             val dateMillis = cal.timeInMillis
 
             val data = Intent().apply {
+                putExtra("taskId", taskId)
                 putExtra("title", title)
                 putExtra("desc", desc)
                 putExtra("dateMillis", dateMillis)
                 putExtra("color", color)
-                putExtra("imagePath", imageUri?.toString()) // save URI string
+                putExtra("imagePath", imageUri?.toString())
             }
 
             setResult(Activity.RESULT_OK, data)
