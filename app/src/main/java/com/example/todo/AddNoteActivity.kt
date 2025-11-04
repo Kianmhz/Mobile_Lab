@@ -1,16 +1,22 @@
 package com.example.todo
 
+import android.app.Activity
 import android.content.Intent
+import android.graphics.Bitmap
 import android.graphics.Color
+import android.net.Uri
 import android.os.Bundle
-import android.widget.Button
-import android.widget.DatePicker
-import android.widget.EditText
-import android.widget.Spinner
+import android.widget.*
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import com.google.android.material.appbar.MaterialToolbar
+import java.io.File
+import java.io.FileOutputStream
+import java.util.*
 
 class AddNoteActivity : AppCompatActivity() {
+
+    private var imageUri: Uri? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -25,30 +31,31 @@ class AddNoteActivity : AppCompatActivity() {
         val taskDate = findViewById<DatePicker>(R.id.taskDate)
         val taskDesc = findViewById<EditText>(R.id.taskDesc)
         val taskColour = findViewById<Spinner>(R.id.taskColour)
+        val imagePreview = findViewById<ImageView>(R.id.imagePreview)
+        val btnTakePhoto = findViewById<Button>(R.id.btnTakePhoto)
+        val btnChooseImage = findViewById<Button>(R.id.btnChooseImage)
+        val doneButton = findViewById<Button>(R.id.addNoteDoneButton)
 
-        // Read incoming extras
+        // --- Handle modes (add vs edit) ---
         val mode = intent.getStringExtra("mode")
         val taskId = intent.getLongExtra("taskId", -1L)
         val incomingTitle = intent.getStringExtra("title")
         val incomingDesc = intent.getStringExtra("desc")
         val incomingDateMillis = intent.getLongExtra("dateMillis", 0L)
         val incomingColor = intent.getIntExtra("color", Color.TRANSPARENT)
+        val incomingImagePath = intent.getStringExtra("imagePath")
 
         if (mode == "edit") {
             supportActionBar?.title = "Edit Task"
-
-            // Title/Desc
             taskTitle.setText(incomingTitle.orEmpty())
             taskDesc.setText(incomingDesc.orEmpty())
 
-            // Date
             if (incomingDateMillis != 0L) {
-                val cal =
-                    java.util.Calendar.getInstance().apply { timeInMillis = incomingDateMillis }
+                val cal = Calendar.getInstance().apply { timeInMillis = incomingDateMillis }
                 taskDate.updateDate(
-                    cal.get(java.util.Calendar.YEAR),
-                    cal.get(java.util.Calendar.MONTH),
-                    cal.get(java.util.Calendar.DAY_OF_MONTH)
+                    cal.get(Calendar.YEAR),
+                    cal.get(Calendar.MONTH),
+                    cal.get(Calendar.DAY_OF_MONTH)
                 )
             }
 
@@ -63,11 +70,38 @@ class AddNoteActivity : AppCompatActivity() {
             (0 until taskColour.count)
                 .firstOrNull { taskColour.getItemAtPosition(it)?.toString() == colorName }
                 ?.let { taskColour.setSelection(it) }
+
+            if (!incomingImagePath.isNullOrEmpty()) {
+                imageUri = Uri.parse(incomingImagePath)
+                imagePreview.setImageURI(imageUri)
+            }
         } else {
             supportActionBar?.title = "Add Task"
         }
 
-        val doneButton = findViewById<Button>(R.id.addNoteDoneButton)
+        // --- Image pickers ---
+        val pickImageLauncher = registerForActivityResult(ActivityResultContracts.GetContent()) { uri ->
+            uri?.let {
+                imageUri = it
+                imagePreview.setImageURI(it)
+            }
+        }
+
+        val takePhotoLauncher = registerForActivityResult(ActivityResultContracts.TakePicturePreview()) { bitmap: Bitmap? ->
+            bitmap?.let {
+                val file = File(cacheDir, "task_${System.currentTimeMillis()}.jpg")
+                FileOutputStream(file).use { out ->
+                    it.compress(Bitmap.CompressFormat.JPEG, 90, out)
+                }
+                imageUri = Uri.fromFile(file)
+                imagePreview.setImageBitmap(it)
+            }
+        }
+
+        btnChooseImage.setOnClickListener { pickImageLauncher.launch("image/*") }
+        btnTakePhoto.setOnClickListener { takePhotoLauncher.launch(null) }
+
+        // --- Done button ---
         doneButton.setOnClickListener {
             val title = taskTitle.text?.toString()?.trim().orEmpty()
             val desc = taskDesc.text?.toString()?.trim().orEmpty()
@@ -87,21 +121,22 @@ class AddNoteActivity : AppCompatActivity() {
                 return@setOnClickListener
             }
 
-            val cal = java.util.Calendar.getInstance().apply {
+            val cal = Calendar.getInstance().apply {
                 set(taskDate.year, taskDate.month, taskDate.dayOfMonth, 0, 0, 0)
-                set(java.util.Calendar.MILLISECOND, 0)
+                set(Calendar.MILLISECOND, 0)
             }
             val dateMillis = cal.timeInMillis
 
-            // Return edited/new values
             val data = Intent().apply {
-                putExtra("taskId", taskId)  // keep -1 if new
+                putExtra("taskId", taskId)
                 putExtra("title", title)
                 putExtra("desc", desc)
                 putExtra("dateMillis", dateMillis)
                 putExtra("color", color)
+                putExtra("imagePath", imageUri?.toString())
             }
-            setResult(RESULT_OK, data)
+
+            setResult(Activity.RESULT_OK, data)
             finish()
         }
     }

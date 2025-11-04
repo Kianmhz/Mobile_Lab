@@ -8,4 +8,5 @@ data class Task(
     val createdAt: Long,
     val done: Boolean,
     val checkbox: Boolean = false,
+    val imagePath: String?,
 )
