@@ -5,6 +5,10 @@ import android.content.Context
 import android.content.Intent
 import android.database.sqlite.SQLiteDatabase
 import android.database.sqlite.SQLiteOpenHelper
+import android.hardware.Sensor
+import android.hardware.SensorEvent
+import android.hardware.SensorEventListener
+import android.hardware.SensorManager
 import android.os.Build
 import android.os.Bundle
 import android.view.Menu
@@ -13,14 +17,16 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.RequiresApi
 import androidx.appcompat.app.ActionBarDrawerToggle
 import androidx.appcompat.app.AppCompatActivity
+import androidx.appcompat.app.AppCompatDelegate
 import androidx.appcompat.widget.SearchView
 import androidx.appcompat.widget.Toolbar
 import androidx.drawerlayout.widget.DrawerLayout
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.navigation.NavigationView
+import kotlin.math.sqrt
 
-class MainActivity : AppCompatActivity() {
+class MainActivity : AppCompatActivity(), SensorEventListener {
 
     private lateinit var adapter: TaskAdapter
     private lateinit var drawer: DrawerLayout
@@ -28,6 +34,13 @@ class MainActivity : AppCompatActivity() {
     private lateinit var toolbar: Toolbar
     private lateinit var toggle: ActionBarDrawerToggle
     private lateinit var dbHelper: DbHelper
+
+    // --- SENSOR CODE ---
+    private lateinit var sensorManager: SensorManager
+    private var isDarkMode = false
+    private var accelCurrent = 0f
+    private var accelLast = 0f
+    private var shake = 0f
 
     // Launcher to get data back from AddNoteActivity
     private val addNoteLauncher = registerForActivityResult(
@@ -77,9 +90,76 @@ class MainActivity : AppCompatActivity() {
             drawer.closeDrawers()
             true
         }
+
+        // --- SENSOR CODE: Initialize sensors ---
+        sensorManager = getSystemService(Context.SENSOR_SERVICE) as SensorManager
+
+        // Light sensor
+        sensorManager.getDefaultSensor(Sensor.TYPE_LIGHT)?.also {
+            sensorManager.registerListener(this, it, SensorManager.SENSOR_DELAY_NORMAL)
+        }
+
+        // Accelerometer
+        sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)?.also {
+            sensorManager.registerListener(this, it, SensorManager.SENSOR_DELAY_UI)
+        }
     }
 
-    // --- App Bar Menu (Search + Add) ---
+    // ------------------ SENSOR LISTENER ------------------
+    override fun onSensorChanged(event: SensorEvent?) {
+        if (event == null) return
+
+        when (event.sensor.type) {
+
+            // --- LIGHT SENSOR: Auto dark mode ---
+            Sensor.TYPE_LIGHT -> {
+                val lux = event.values[0]
+
+                if (lux < 10 && !isDarkMode) {
+                    AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_YES)
+                    isDarkMode = true
+                } else if (lux >= 10 && isDarkMode) {
+                    AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_NO)
+                    isDarkMode = false
+                }
+            }
+
+            // --- ACCELEROMETER: Shake to add task ---
+            Sensor.TYPE_ACCELEROMETER -> {
+                val x = event.values[0]
+                val y = event.values[1]
+                val z = event.values[2]
+
+                accelLast = accelCurrent
+                accelCurrent = sqrt((x * x + y * y + z * z).toDouble()).toFloat()
+                val delta = accelCurrent - accelLast
+                shake = shake * 0.9f + delta
+
+                if (shake > 12) {  // shake threshold
+                    addNoteLauncher.launch(Intent(this, AddNoteActivity::class.java))
+                }
+            }
+        }
+    }
+
+    override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {}
+
+    override fun onPause() {
+        super.onPause()
+        sensorManager.unregisterListener(this)
+    }
+
+    override fun onResume() {
+        super.onResume()
+        sensorManager.getDefaultSensor(Sensor.TYPE_LIGHT)?.also {
+            sensorManager.registerListener(this, it, SensorManager.SENSOR_DELAY_NORMAL)
+        }
+        sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)?.also {
+            sensorManager.registerListener(this, it, SensorManager.SENSOR_DELAY_UI)
+        }
+    }
+
+    // --- App Bar Menu (Search + Add + Delete) ---
     @RequiresApi(Build.VERSION_CODES.HONEYCOMB)
     override fun onCreateOptionsMenu(menu: Menu): Boolean {
         menuInflater.inflate(R.menu.menu_main, menu)
@@ -89,7 +169,6 @@ class MainActivity : AppCompatActivity() {
         val sv = searchItem?.actionView as? SearchView
 
         sv?.queryHint = "Search by title"
-        // expand so typing works immediately (optional)
         searchItem?.expandActionView()
         sv?.isIconified = false
 
@@ -98,6 +177,7 @@ class MainActivity : AppCompatActivity() {
                 adapter.submitList(if (q.isNullOrBlank()) allTasks() else searchTasksByTitle(q))
                 return true
             }
+
             override fun onQueryTextChange(newText: String?): Boolean {
                 adapter.submitList(if (newText.isNullOrBlank()) allTasks() else searchTasksByTitle(newText))
                 return true
@@ -121,7 +201,6 @@ class MainActivity : AppCompatActivity() {
             else -> super.onOptionsItemSelected(item)
         }
     }
-
 
     // ------------------ DATABASE ------------------
     inner class DbHelper(ctx: Context) : SQLiteOpenHelper(ctx, "todo.db", null, 2) {
@@ -186,7 +265,6 @@ class MainActivity : AppCompatActivity() {
         }
         dbHelper.writableDatabase.insert("tasks", null, cv)
     }
-
 
     private fun all(): List<Map<String, Any>> =
         query("SELECT * FROM tasks ORDER BY created_at DESC", null)
