@@ -113,9 +113,15 @@ class MainActivity : AppCompatActivity() {
                 true
             }
 
+            R.id.action_delete -> {
+                deleteCheckedTasks()
+                true
+            }
+
             else -> super.onOptionsItemSelected(item)
         }
     }
+
 
     // ------------------ DATABASE ------------------
     inner class DbHelper(ctx: Context) : SQLiteOpenHelper(ctx, "todo.db", null, 2) {
