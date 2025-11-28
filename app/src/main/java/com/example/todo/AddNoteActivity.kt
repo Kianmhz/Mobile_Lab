@@ -87,16 +87,17 @@ class AddNoteActivity : AppCompatActivity() {
             }
         }
 
-        val takePhotoLauncher = registerForActivityResult(ActivityResultContracts.TakePicturePreview()) { bitmap: Bitmap? ->
-            bitmap?.let {
-                val file = File(cacheDir, "task_${System.currentTimeMillis()}.jpg")
-                FileOutputStream(file).use { out ->
-                    it.compress(Bitmap.CompressFormat.JPEG, 90, out)
+        val takePhotoLauncher =
+            registerForActivityResult(ActivityResultContracts.TakePicturePreview()) { bitmap: Bitmap? ->
+                bitmap?.let {
+                    val file = File(cacheDir, "task_${System.currentTimeMillis()}.jpg")
+                    FileOutputStream(file).use { out ->
+                        it.compress(Bitmap.CompressFormat.JPEG, 90, out)
+                    }
+                    imageUri = Uri.fromFile(file)
+                    imagePreview.setImageBitmap(it)
                 }
-                imageUri = Uri.fromFile(file)
-                imagePreview.setImageBitmap(it)
             }
-        }
 
         btnChooseImage.setOnClickListener { pickImageLauncher.launch("image/*") }
         btnTakePhoto.setOnClickListener { takePhotoLauncher.launch(null) }

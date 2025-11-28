@@ -42,18 +42,39 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
     private var accelLast = 0f
     private var shake = 0f
 
-    // Launcher to get data back from AddNoteActivity
+    // Launcher to get data back from AddNoteActivity (both add + edit)
     private val addNoteLauncher = registerForActivityResult(
         ActivityResultContracts.StartActivityForResult()
     ) { result ->
         if (result.resultCode == RESULT_OK && result.data != null) {
-            val title = result.data!!.getStringExtra("title").orEmpty()
-            val desc = result.data!!.getStringExtra("desc").orEmpty()
-            val date = result.data!!.getLongExtra("dateMillis", System.currentTimeMillis())
-            val color = result.data!!.getIntExtra("color", 0xFF90CAF9.toInt())
-            val imagePath = result.data!!.getStringExtra("imagePath")
+            val data = result.data!!
+            val taskId = data.getLongExtra("taskId", -1L)
+            val title = data.getStringExtra("title").orEmpty()
+            val desc = data.getStringExtra("desc").orEmpty()
+            val date = data.getLongExtra("dateMillis", System.currentTimeMillis())
+            val color = data.getIntExtra("color", 0xFF90CAF9.toInt())
+            val imagePath = data.getStringExtra("imagePath")
 
-            insert(title = title, note = desc, createdAt = date, color = color, imagePath = imagePath)
+            if (taskId >= 0) {
+                // EDIT
+                updateTask(
+                    id = taskId,
+                    title = title,
+                    note = desc,
+                    createdAt = date,
+                    color = color,
+                    imagePath = imagePath
+                )
+            } else {
+                // ADD
+                insert(
+                    title = title,
+                    note = desc,
+                    createdAt = date,
+                    color = color,
+                    imagePath = imagePath
+                )
+            }
             refresh()
         }
     }
@@ -78,7 +99,19 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
 
         // RecyclerView
         val recyclerView = findViewById<RecyclerView>(R.id.tasks_arr)
-        adapter = TaskAdapter(emptyList())
+        adapter = TaskAdapter(emptyList()) { task ->
+            // tap to edit
+            val intent = Intent(this, AddNoteActivity::class.java).apply {
+                putExtra("mode", "edit")
+                putExtra("taskId", task.id)
+                putExtra("title", task.title)
+                putExtra("desc", task.note)
+                putExtra("dateMillis", task.createdAt)
+                putExtra("color", task.color)
+                putExtra("imagePath", task.imagePath)
+            }
+            addNoteLauncher.launch(intent)
+        }
         recyclerView.adapter = adapter
         recyclerView.layoutManager = LinearLayoutManager(this)
         refresh()
@@ -114,7 +147,6 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
             // --- LIGHT SENSOR: Auto dark mode ---
             Sensor.TYPE_LIGHT -> {
                 val lux = event.values[0]
-
                 if (lux < 10 && !isDarkMode) {
                     AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_YES)
                     isDarkMode = true
@@ -165,7 +197,6 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         menuInflater.inflate(R.menu.menu_main, menu)
 
         val searchItem = menu.findItem(R.id.action_search)
-
         val sv = searchItem?.actionView as? SearchView
 
         sv?.queryHint = "Search by title"
@@ -203,7 +234,8 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
     }
 
     // ------------------ DATABASE ------------------
-    inner class DbHelper(ctx: Context) : SQLiteOpenHelper(ctx, "todo.db", null, 2) {
+    inner class DbHelper(ctx: Context) :
+        SQLiteOpenHelper(ctx, "todo.db", null, 2) {
         override fun onCreate(db: SQLiteDatabase) {
             db.execSQL(
                 """
@@ -263,7 +295,8 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
             put("done", if (done) 1 else 0)
             put("image_path", imagePath)
         }
-        dbHelper.writableDatabase.insert("tasks", null, cv)
+        // IMPORTANT: this is UPDATE, not insert
+        dbHelper.writableDatabase.update("tasks", cv, "_id = ?", arrayOf(id.toString()))
     }
 
     private fun all(): List<Map<String, Any>> =
@@ -286,7 +319,6 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
             val n = it.getColumnIndexOrThrow("note")
             val col = it.getColumnIndexOrThrow("color")
             val ts = it.getColumnIndexOrThrow("created_at")
-            val imgp = it.getColumnIndexOrThrow("image_path")
             val dn = it.getColumnIndexOrThrow("done")
             val img = it.getColumnIndexOrThrow("image_path")
             while (it.moveToNext()) {

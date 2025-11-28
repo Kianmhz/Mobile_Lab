@@ -7,6 +7,5 @@ data class Task(
     val color: Int,
     val createdAt: Long,
     val done: Boolean,
-    val checkbox: Boolean = false,
-    val imagePath: String?,
+    val imagePath: String?
 )

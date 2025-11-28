@@ -2,6 +2,7 @@ package com.example.todo
 
 import android.annotation.SuppressLint
 import android.view.LayoutInflater
+import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
 import android.widget.CheckBox
@@ -11,8 +12,10 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
-class TaskAdapter(private var tasks: List<Task>) :
-    RecyclerView.Adapter<TaskAdapter.TaskViewHolder>() {
+class TaskAdapter(
+    private var tasks: List<Task>,
+    private val onItemClick: (Task) -> Unit
+) : RecyclerView.Adapter<TaskAdapter.TaskViewHolder>() {
 
     private val checkedIds = mutableSetOf<Long>()
 
@@ -44,7 +47,7 @@ class TaskAdapter(private var tasks: List<Task>) :
         holder.tDate.text = formatter.format(date)
 
         // ---- Bind checkbox state ----
-        holder.checkbox.setOnCheckedChangeListener(null) // prevents unwanted triggers
+        holder.checkbox.setOnCheckedChangeListener(null)
         holder.checkbox.isChecked = checkedIds.contains(task.id)
 
         holder.checkbox.setOnCheckedChangeListener { _, isChecked ->
@@ -52,16 +55,21 @@ class TaskAdapter(private var tasks: List<Task>) :
             else checkedIds.remove(task.id)
         }
 
-        // Animations on touch (your original code)
+        // ---- Item click: open edit ----
+        holder.itemView.setOnClickListener {
+            onItemClick(task)
+        }
+
+        // ---- Touch animation ----
         holder.itemView.setOnTouchListener { v, event ->
             when (event.action) {
-                android.view.MotionEvent.ACTION_DOWN -> {
+                MotionEvent.ACTION_DOWN -> {
                     v.animate().scaleX(1.05f).scaleY(1.05f).setDuration(150).start()
-                    true
+                    false  // let click still fire
                 }
-                android.view.MotionEvent.ACTION_UP -> {
+                MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
                     v.animate().scaleX(1f).scaleY(1f).setDuration(150).start()
-                    true
+                    false
                 }
                 else -> false
             }
